@@ -2,6 +2,7 @@
 Entrypoint for streamlit, see https://docs.streamlit.io/
 """
 
+import base64
 import logging
 import os
 import traceback
@@ -27,8 +28,23 @@ from .loop import (
 )
 from .tools import ToolResult
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+# configure formatter
+formatter = logging.Formatter(
+    '%(asctime)s - %(levelname)s - %(message)s'
+)
+
+# console handler
+ch = logging.StreamHandler()
+ch.setFormatter(formatter)
+logger.addHandler(ch)
+
+# file handler
+file_handler = logging.FileHandler('public/app.log', mode='a')
+file_handler.setFormatter(formatter)
+logger.addHandler(file_handler)
 
 CONFIG_DIR = PosixPath("~/.anthropic").expanduser()
 API_KEY_FILE = CONFIG_DIR / "api_key"
@@ -125,7 +141,7 @@ async def main(new_message: str):
 
     text_response = state["messages"][-1]["content"][0]["text"]
     if not text_response:
-        logger.error("NATH - no new messages to show")
+        logger.error("no response")
 
     logger.info(f"NATH - Final message: {text_response}")
     return text_response
@@ -208,7 +224,6 @@ def save_to_storage(filename: str, data: str) -> None:
     except Exception as e:
         logger.error(f"Debug: Error saving {filename}: {e}")
 
-
 def _api_response_callback(
     request: httpx.Request,
     response: httpx.Response | object | None,
@@ -269,7 +284,7 @@ def _render_error(error: Exception):
         lines = "\n".join(traceback.format_exception(error))
         body += f"\n\n```{lines}```"
     save_to_storage(f"error_{datetime.now().timestamp()}.md", body)
-    logger.info(f"**{error.__class__.__name__}**\n\n{body}")
+    logger.error(f"**{error.__class__.__name__}**\n\n{body}")
 
 
 def _render_message(
@@ -293,7 +308,11 @@ def _render_message(
         if message.error:
             logger.error(message.error)
         if message.base64_image:
-            logger.warning(f"image returned by sender {sender}")
+            logger.info(f"screenshot taken by {sender}")
+            image_data = base64.b64decode(message.base64_image)
+            timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+            with open(f"public/{timestamp}.png", "wb") as image_file:
+                image_file.write(image_data)
     elif isinstance(message, dict):
         if message["type"] == "text":
             logger.info(message["text"])

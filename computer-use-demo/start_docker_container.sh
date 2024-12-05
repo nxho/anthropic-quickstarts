@@ -8,6 +8,7 @@ docker run \
   -e EMAIL_ALIAS=$EMAIL_ALIAS \
   -v "$(pwd)/computer_use_demo:/home/computeruse/computer_use_demo/" \
   -v "$HOME/.anthropic:/home/computeruse/.anthropic" \
+  -v "$(pwd)/public:/home/computeruse/public/" \
   -p 5900:5900 \
   -p 8501:8501 \
   -p 6080:6080 \
