@@ -41,10 +41,13 @@ ch = logging.StreamHandler()
 ch.setFormatter(formatter)
 logger.addHandler(ch)
 
+enable_file_logging = False
+
 # file handler
-file_handler = logging.FileHandler('public/app.log', mode='a')
-file_handler.setFormatter(formatter)
-logger.addHandler(file_handler)
+if enable_file_logging:
+    file_handler = logging.FileHandler('public/app.log', mode='a')
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
 
 CONFIG_DIR = PosixPath("~/.anthropic").expanduser()
 API_KEY_FILE = CONFIG_DIR / "api_key"
@@ -309,10 +312,11 @@ def _render_message(
             logger.error(message.error)
         if message.base64_image:
             logger.info(f"screenshot taken by {sender}")
-            image_data = base64.b64decode(message.base64_image)
-            timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-            with open(f"public/{timestamp}.png", "wb") as image_file:
-                image_file.write(image_data)
+            if enable_file_logging:
+                image_data = base64.b64decode(message.base64_image)
+                timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+                with open(f"public/{timestamp}.png", "wb") as image_file:
+                    image_file.write(image_data)
     elif isinstance(message, dict):
         if message["type"] == "text":
             logger.info(message["text"])
