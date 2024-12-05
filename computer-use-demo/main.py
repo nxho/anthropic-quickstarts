@@ -40,7 +40,7 @@ async def askgpt_and_start_session(prompt):
     print("Starting virtual machine with prompt")
     results = await streamlit_main(email_input)
 
-    system = "You are a robot named easi.work. You are writing an email with a summary of your findings from the following results: "
+    system = "You are a robot named easi.work. You are writing an informal email with a summary of your findings from some set of results. Here are the results:"
     return askgpt(system, results)
 
 
@@ -160,6 +160,7 @@ async def read_emails(from_email, app_password, folder="INBOX", filter_to=None):
     except Exception as e:
         print(f"Error: {e}")
 
+
 async def main():
     from_email = os.getenv("ICLOUD_USER_EMAIL")
     email_alias = os.getenv("EMAIL_ALIAS")
@@ -178,6 +179,7 @@ async def main():
     while True:
         await read_emails(from_email, app_password, filter_to=email_alias)
         time.sleep(60)
+
 
 # usage example
 if __name__ == "__main__":
