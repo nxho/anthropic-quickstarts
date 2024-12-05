@@ -9,7 +9,7 @@ from email.mime.text import MIMEText
 
 from openai import OpenAI
 
-from computer_use_demo.streamlit import main
+from computer_use_demo.streamlit import main as streamlit_main
 
 
 def askgpt(system, prompt):
@@ -32,15 +32,13 @@ def askgpt(system, prompt):
     return response.choices[0].message.content
 
 
-def askgpt_and_start_session(prompt):
+async def askgpt_and_start_session(prompt):
     # Execute the computer use session
     system = "You are a prompt adjuster. You make flesh out prompts for AI tools that are capable and connected to the internet so that they are more clear and direct. Your prompts come from emails from normal people. Return a more clear prompt. Make some assumptions about what reasonable people would be requesting"
     email_input = askgpt(system, prompt)
 
     print("Starting virtual machine with prompt")
-    loop = asyncio.get_event_loop()
-    results = loop.run_until_complete(main(email_input))
-    loop.close()
+    results = await streamlit_main(email_input)
 
     system = "You are a robot named easi.work. You are writing an email with a summary of your findings from the following results: "
     return askgpt(system, results)
@@ -73,7 +71,7 @@ def send_email(subject, body, to_email, from_email, email_alias, app_password):
         print(f"error: {e}")
 
 
-def read_emails(from_email, app_password, folder="INBOX", filter_to=None):
+async def read_emails(from_email, app_password, folder="INBOX", filter_to=None):
     try:
         imap_server = "imap.mail.me.com"
         imap_port = 993
@@ -133,7 +131,7 @@ def read_emails(from_email, app_password, folder="INBOX", filter_to=None):
 
                     # generate a response
                     print("Asking GPT for a response")
-                    call_to_action = askgpt_and_start_session(
+                    call_to_action = await askgpt_and_start_session(
                         f"Subject: {subject}\n\nBody: {body}"
                     )
                     send_email(
@@ -141,7 +139,7 @@ def read_emails(from_email, app_password, folder="INBOX", filter_to=None):
                         call_to_action,
                         sender,
                         from_email,
-                        email_alias,
+                        filter_to,
                         app_password,
                     )
 
@@ -162,9 +160,7 @@ def read_emails(from_email, app_password, folder="INBOX", filter_to=None):
     except Exception as e:
         print(f"Error: {e}")
 
-
-# usage example
-if __name__ == "__main__":
+async def main():
     from_email = os.getenv("ICLOUD_USER_EMAIL")
     email_alias = os.getenv("EMAIL_ALIAS")
     app_password = os.getenv("ICLOUD_APP_PASSWORD")
@@ -180,5 +176,9 @@ if __name__ == "__main__":
     # system = "You are taking the information provided and writing an email as a helpful AI assistant named Easi.Work"
     # print(askgpt(system, results))
     while True:
-        read_emails(from_email, app_password, filter_to=email_alias)
+        await read_emails(from_email, app_password, filter_to=email_alias)
         time.sleep(60)
+
+# usage example
+if __name__ == "__main__":
+    asyncio.run(main())

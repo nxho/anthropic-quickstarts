@@ -124,11 +124,11 @@ async def main(new_message: str):
     logger.info("NATH - finished loop")
 
     text_response = state["messages"][-1]["content"][0]["text"]
-    if text_response:
-        logger.info(f"NATH - Final message: {text_response}")
-    else:
+    if not text_response:
         logger.error("NATH - no new messages to show")
 
+    logger.info(f"NATH - Final message: {text_response}")
+    return text_response
 
 def maybe_add_interruption_blocks(state):
     if not state["in_sampling_loop"]:
