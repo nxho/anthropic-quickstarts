@@ -12,6 +12,7 @@ from enum import StrEnum
 from functools import partial
 from pathlib import PosixPath
 from typing import cast
+from uuid import uuid4
 
 import httpx
 from anthropic import RateLimitError
@@ -32,9 +33,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 # configure formatter
-formatter = logging.Formatter(
-    '%(asctime)s - %(levelname)s - %(message)s'
-)
+formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
 
 # console handler
 ch = logging.StreamHandler()
@@ -45,7 +44,7 @@ enable_file_logging = False
 
 # file handler
 if enable_file_logging:
-    file_handler = logging.FileHandler('public/app.log', mode='a')
+    file_handler = logging.FileHandler("public/app.log", mode="a")
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
 
@@ -80,6 +79,10 @@ class Sender(StrEnum):
     TOOL = "tool"
 
 
+# Store message state per request id
+messages_for_session_id = {}
+
+
 def setup_state(state):
     state.setdefault("messages", [])
     state.setdefault(
@@ -105,11 +108,10 @@ def setup_state(state):
 
 
 async def main(new_message: str):
+    session_id = uuid4()
     """Render loop for streamlit"""
     state = {}
     setup_state(state)
-
-    logger.info("NATH - appending message")
 
     state["messages"].append(
         {
@@ -128,7 +130,7 @@ async def main(new_message: str):
             model=state["model"],
             provider=state["provider"],
             messages=state["messages"],
-            output_callback=partial(_render_message, Sender.BOT),
+            output_callback=partial(_render_message, Sender.BOT, session_id),
             tool_output_callback=partial(
                 _tool_output_callback, tool_state=state["tools"]
             ),
@@ -148,6 +150,7 @@ async def main(new_message: str):
 
     logger.info(f"NATH - Final message: {text_response}")
     return text_response
+
 
 def maybe_add_interruption_blocks(state):
     if not state["in_sampling_loop"]:
@@ -227,6 +230,7 @@ def save_to_storage(filename: str, data: str) -> None:
     except Exception as e:
         logger.error(f"Debug: Error saving {filename}: {e}")
 
+
 def _api_response_callback(
     request: httpx.Request,
     response: httpx.Response | object | None,
@@ -257,22 +261,9 @@ def _render_api_response(
     response_id: str,
 ):
     """Render an API response to a streamlit tab"""
-    #    with tab:
-    #        with st.expander(f"Request/Response ({response_id})"):
-    #            newline = "\n\n"
-    #            st.markdown(
-    #                f"`{request.method} {request.url}`{newline}{newline.join(f'`{k}: {v}`' for k, v in request.headers.items())}"
-    #            )
-    #            st.json(request.read().decode())
-    #            st.markdown("---")
-    #            if isinstance(response, httpx.Response):
-    #                st.markdown(
-    #                    f"`{response.status_code}`{newline}{newline.join(f'`{k}: {v}`' for k, v in response.headers.items())}"
-    #                )
-    #                st.json(response.text)
-    #            else:
-    #                st.write(response)
-    logger.info(f"_render_api_response - request={request} response={response} response_id={response_id}")
+    logger.info(
+        f"_render_api_response - request={request} response={response} response_id={response_id}"
+    )
 
 
 def _render_error(error: Exception):
@@ -292,6 +283,7 @@ def _render_error(error: Exception):
 
 def _render_message(
     sender: Sender,
+    session_id: string,
     message: str | BetaContentBlockParam | ToolResult,
 ):
     """Convert input from the user or output from the agent to a streamlit message."""
@@ -304,6 +296,7 @@ def _render_message(
     ):
         return
 
+    messages_for_session_id[session_id] = message
     if is_tool_result:
         message = cast(ToolResult, message)
         if message.output:
@@ -314,7 +307,7 @@ def _render_message(
             logger.info(f"screenshot taken by {sender}")
             if enable_file_logging:
                 image_data = base64.b64decode(message.base64_image)
-                timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+                timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
                 with open(f"public/{timestamp}.png", "wb") as image_file:
                     image_file.write(image_data)
     elif isinstance(message, dict):
