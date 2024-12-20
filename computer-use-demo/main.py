@@ -40,7 +40,7 @@ async def askgpt_and_start_session(prompt):
     print("Starting virtual machine with prompt")
     results = await streamlit_main(email_input)
 
-    system = "You are a robot named easi.work. You are writing an informal email with a summary of your findings from some set of results. Here are the results:"
+    system = "You are a robot named easi.work. You are writing an informal email with a summary of your findings from some set of results. You are not writing a template email. Do not start the email with a salutation. Do not end the email with a closing or signature. Here are the results:"
     return askgpt(system, results)
 
 
