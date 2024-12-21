@@ -94,7 +94,7 @@ function App() {
       <div
         ref={containerRef}
         style={{
-            height: "600px",
+            height: "800px",
             overflowY: "auto",
             border: "1px solid black",
         }}
