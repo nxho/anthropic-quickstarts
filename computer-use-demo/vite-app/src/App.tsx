@@ -77,14 +77,23 @@ function App() {
     };
   }, []);
 
-    const containerRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-    useEffect(() => {
-      const container = containerRef.current;
-      if (container) {
-        container.scrollTop = container.scrollHeight;
-      }
-    }, []);
+  useEffect(() => {
+    const container = containerRef.current;
+    if (container) {
+      container.scrollTop = container.scrollHeight;
+    }
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      window.location.reload();
+    }, 10000); // 10 seconds
+
+    // Cleanup the interval on component unmount
+    return () => clearInterval(interval);
+  }, []);
 
   console.log('all messages', messages);
 
