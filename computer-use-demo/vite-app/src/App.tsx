@@ -84,7 +84,7 @@ function App() {
     if (container) {
       container.scrollTop = container.scrollHeight;
     }
-  }, []);
+  }, [messages]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -94,8 +94,6 @@ function App() {
     // Cleanup the interval on component unmount
     return () => clearInterval(interval);
   }, []);
-
-  console.log('all messages', messages);
 
   return (
     <div>
