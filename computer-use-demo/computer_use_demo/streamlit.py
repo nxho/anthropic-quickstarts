@@ -3,6 +3,7 @@ Entrypoint for streamlit, see https://docs.streamlit.io/
 """
 
 import base64
+import json
 import logging
 import os
 import traceback
@@ -28,6 +29,9 @@ from .loop import (
     sampling_loop,
 )
 from .tools import ToolResult
+from .singleton_storage import SingletonStorage
+
+session_state = SingletonStorage()
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -79,10 +83,6 @@ class Sender(StrEnum):
     TOOL = "tool"
 
 
-# Store message state per request id
-messages_for_session_id = {}
-
-
 def setup_state(state):
     state.setdefault("messages", [])
     state.setdefault(
@@ -108,20 +108,26 @@ def setup_state(state):
 
 
 async def main(new_message: str):
-    session_id = uuid4()
     """Render loop for streamlit"""
     state = {}
     setup_state(state)
+    state["messages"].append({
+        "role": Sender.USER,
+        "content": [
+            *maybe_add_interruption_blocks(state),
+            BetaTextBlockParam(type="text", text=new_message),
+        ],
+    })
 
-    state["messages"].append(
-        {
+    session_id = uuid4().hex
+    logger.info(f"Session ID generated for \"{new_message}\": {session_id}")
+    session_state.data[session_id] = {
+        "messages": [{
             "role": Sender.USER,
-            "content": [
-                *maybe_add_interruption_blocks(state),
-                BetaTextBlockParam(type="text", text=new_message),
-            ],
-        }
-    )
+            "type": "text",
+            "content": new_message,
+        }]
+    }
 
     with track_sampling_loop(state):
         # run the agent sampling loop with the newest message
@@ -132,7 +138,9 @@ async def main(new_message: str):
             messages=state["messages"],
             output_callback=partial(_render_message, Sender.BOT, session_id),
             tool_output_callback=partial(
-                _tool_output_callback, tool_state=state["tools"]
+                _tool_output_callback,
+                tool_state=state["tools"],
+                session_id=session_id,
             ),
             api_response_callback=partial(
                 _api_response_callback,
@@ -248,11 +256,14 @@ def _api_response_callback(
 
 
 def _tool_output_callback(
-    tool_output: ToolResult, tool_id: str, tool_state: dict[str, ToolResult]
+    tool_output: ToolResult,
+    tool_id: str,
+    tool_state: dict[str, ToolResult],
+    session_id: str
 ):
     """Handle a tool output by storing it to state and rendering it."""
     tool_state[tool_id] = tool_output
-    _render_message(Sender.TOOL, tool_output)
+    _render_message(Sender.TOOL, session_id, tool_output)
 
 
 def _render_api_response(
@@ -281,9 +292,9 @@ def _render_error(error: Exception):
     logger.error(f"**{error.__class__.__name__}**\n\n{body}")
 
 
-def _render_message(
+async def _render_message(
     sender: Sender,
-    session_id: string,
+    session_id: str,
     message: str | BetaContentBlockParam | ToolResult,
 ):
     """Convert input from the user or output from the agent to a streamlit message."""
@@ -296,14 +307,24 @@ def _render_message(
     ):
         return
 
-    messages_for_session_id[session_id] = message
+    readable_message = {
+        "role": sender,
+        "type": "",
+        "content": "",
+    }
     if is_tool_result:
         message = cast(ToolResult, message)
         if message.output:
+            readable_message["type"] = "text"
+            readable_message["content"] = message.output
             logger.info(message.output)
         if message.error:
+            readable_message["type"] = "error"
+            readable_message["content"] = message.error
             logger.error(message.error)
         if message.base64_image:
+            readable_message["type"] = "image"
+            readable_message["content"] = message.base64_image
             logger.info(f"screenshot taken by {sender}")
             if enable_file_logging:
                 image_data = base64.b64decode(message.base64_image)
@@ -312,9 +333,21 @@ def _render_message(
                     image_file.write(image_data)
     elif isinstance(message, dict):
         if message["type"] == "text":
+            readable_message["type"] = "text"
+            readable_message["content"] = message["text"]
             logger.info(message["text"])
         elif message["type"] == "tool_use":
-            logger.info(f'Tool Use: {message["name"]}\nInput: {message["input"]}')
+            string_to_log = f'Tool Use: {message["name"]}\nInput: {message["input"]}'
+            readable_message["type"] = "text"
+            readable_message["content"] = string_to_log
+            logger.info(string_to_log)
         else:
             # only expected return types are text and tool_use
             raise Exception(f'Unexpected response type {message["type"]}')
+
+    state_for_session_id = session_state.data[session_id]
+    if "ws" in state_for_session_id:
+        logger.info(f"debug: websocket defined for {session_id}")
+        await state_for_session_id["ws"].send(json.dumps(readable_message))
+    if "messages" in state_for_session_id: 
+        state_for_session_id["messages"].append(readable_message)

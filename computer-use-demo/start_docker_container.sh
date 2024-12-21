@@ -13,4 +13,5 @@ docker run \
   -p 8501:8501 \
   -p 6080:6080 \
   -p 8080:8080 \
+  -p 8001:8001 \
   -it --rm computer-use-demo:local
