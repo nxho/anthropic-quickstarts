@@ -93,7 +93,7 @@ function App() {
   }, []);
 
   return (
-    <div ref={containerRef}>
+    <div>
       <p>WebSocket Status: {connectionStatus}</p>
       {messages.map((message, index) => (
         <Message key={index} {...message} ref={index === messages.length - 1 ? messagesEndRef : null} />
