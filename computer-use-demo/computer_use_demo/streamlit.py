@@ -292,7 +292,7 @@ def _render_error(error: Exception):
     logger.error(f"**{error.__class__.__name__}**\n\n{body}")
 
 
-async def _render_message(
+def _render_message(
     sender: Sender,
     session_id: str,
     message: str | BetaContentBlockParam | ToolResult,
@@ -348,6 +348,5 @@ async def _render_message(
     state_for_session_id = session_state.data[session_id]
     if "ws" in state_for_session_id:
         logger.info(f"debug: websocket defined for {session_id}")
-        await state_for_session_id["ws"].send(json.dumps(readable_message))
     if "messages" in state_for_session_id: 
         state_for_session_id["messages"].append(readable_message)

@@ -6,6 +6,7 @@ import smtplib
 import traceback
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from functools import partial
 
 from openai import OpenAI
 
@@ -69,7 +70,7 @@ def send_email(subject, body, to_email, from_email, email_alias, app_password):
     except Exception as e:
         print(f"Error occurred when sending email: {e}")
 
-async def process_single_email(email_id_in_bytes, mail, from_email, filter_to, app_password):
+def fetch_email_metadata(email_id_in_bytes, mail):
     # fetch email flags
     flag_status, flag_data = mail.fetch(email_id_in_bytes, "(FLAGS)")
     flags = flag_data[0].decode("utf-8") if flag_data[0] else ""
@@ -94,6 +95,12 @@ async def process_single_email(email_id_in_bytes, mail, from_email, filter_to, a
         if email_message.is_multipart()
         else email_message.get_payload()
     )
+    return subject, body, sender, is_read
+
+async def process_single_email(email_id_in_bytes, mail, from_email, filter_to, app_password):
+    # avoid blocking event loop, do network calls in thread pool
+    subject, body, sender, is_read = await loop.run_in_executor(
+        None, partial(fetch_email_metadata, email_id_in_bytes, mail))
 
     # print read/unread status and email details
     status_text = "Read" if is_read else "Unread"
