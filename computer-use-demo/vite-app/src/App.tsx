@@ -77,15 +77,32 @@ function App() {
     };
   }, []);
 
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+      const container = containerRef.current;
+      if (container) {
+        container.scrollTop = container.scrollHeight;
+      }
+    }, []);
+
   console.log('all messages', messages);
 
   return (
     <div>
-      <h1>WebSocket Example</h1>
-      <p>Status: {connectionStatus}</p>
-      {messages.map((message, index) => (
-        <Message key={index} {...message} />
-      ))}
+      <p>WebSocket Status: {connectionStatus}</p>
+      <div
+        ref={containerRef}
+        style={{
+            height: "600px",
+            overflowY: "auto",
+            border: "1px solid black",
+        }}
+      >
+        {messages.map((message, index) => (
+          <Message key={index} {...message} />
+        ))}
+      </div>
     </div>
   );
 }
