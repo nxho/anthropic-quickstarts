@@ -1,7 +1,6 @@
 import asyncio
 import email
 import imaplib
-import os
 import smtplib
 import traceback
 from email.mime.multipart import MIMEMultipart
@@ -12,6 +11,7 @@ from uuid import uuid4
 from openai import OpenAI
 
 from computer_use_demo.streamlit import main as streamlit_main
+
 
 def askgpt(system, prompt):
     client = OpenAI()
@@ -71,6 +71,7 @@ def send_email(subject, body, to_email, from_email, email_alias, app_password):
     except Exception as e:
         print(f"Error occurred when sending email: {e}")
 
+
 def fetch_email_metadata(email_id_in_bytes, mail):
     # fetch email flags
     flag_status, flag_data = mail.fetch(email_id_in_bytes, "(FLAGS)")
@@ -98,11 +99,15 @@ def fetch_email_metadata(email_id_in_bytes, mail):
     )
     return subject, body, sender, is_read
 
-async def process_single_email(email_id_in_bytes, mail, from_email, filter_to, app_password):
+
+async def process_single_email(
+    email_id_in_bytes, mail, from_email, filter_to, app_password
+):
     # avoid blocking event loop, do network calls in thread pool
     loop = asyncio.get_running_loop()
     subject, body, sender, is_read = await loop.run_in_executor(
-        None, partial(fetch_email_metadata, email_id_in_bytes, mail))
+        None, partial(fetch_email_metadata, email_id_in_bytes, mail)
+    )
 
     # print read/unread status and email details
     status_text = "Read" if is_read else "Unread"
@@ -112,37 +117,38 @@ async def process_single_email(email_id_in_bytes, mail, from_email, filter_to, a
         print(f"Body: {body}")
 
         session_id = uuid4().hex
-        print(f"Session ID generated for \"{subject}\": {session_id}")
+        print(f'Session ID generated for "{subject}": {session_id}')
 
-        await loop.run_in_executor(None, partial(send_email,
-                                                 subject,
-                                                 f"Hey! Give us a moment, we're working on your request ({session_id})",
-                                                 sender,
-                                                 from_email,
-                                                 filter_to,
-                                                 app_password))
+        await loop.run_in_executor(
+            None,
+            partial(
+                send_email,
+                subject,
+                f"Hey! Give us a moment, we're working on your request ({session_id})",
+                sender,
+                from_email,
+                filter_to,
+                app_password,
+            ),
+        )
 
         # generate a response
         print("Asking GPT for a response")
         call_to_action = await askgpt_and_start_session(
-            f"Subject: {subject}\n\nBody: {body}",
-            session_id
+            f"Subject: {subject}\n\nBody: {body}", session_id
         )
 
-        await loop.run_in_executor(None, partial(send_email,
-                                                 subject,
-                                                 call_to_action,
-                                                 sender,
-                                                 from_email,
-                                                 filter_to,
-                                                 app_password))
-        send_email(
-            subject,
-            call_to_action,
-            sender,
-            from_email,
-            filter_to,
-            app_password,
+        await loop.run_in_executor(
+            None,
+            partial(
+                send_email,
+                subject,
+                call_to_action,
+                sender,
+                from_email,
+                filter_to,
+                app_password,
+            ),
         )
 
         # mark email as read
@@ -159,7 +165,10 @@ async def process_single_email(email_id_in_bytes, mail, from_email, filter_to, a
         print(f"Subject: {subject}")
         print("-" * 50)
 
-async def read_emails(from_email, app_password, folder="INBOX", filter_to=None, email_id=None):
+
+async def read_emails(
+    from_email, app_password, folder="INBOX", filter_to=None, email_id=None
+):
     try:
         imap_server = "imap.mail.me.com"
         imap_port = 993
@@ -184,13 +193,16 @@ async def read_emails(from_email, app_password, folder="INBOX", filter_to=None, 
 
             if email_id:
                 email_id_in_bytes = str.encode(f"{email_id}")
-                await process_single_email(email_id_in_bytes, mail, from_email, filter_to, app_password)
+                await process_single_email(
+                    email_id_in_bytes, mail, from_email, filter_to, app_password
+                )
                 return None
 
             for num in email_ids:
-                await process_single_email(num, mail, from_email, filter_to, app_password)
+                await process_single_email(
+                    num, mail, from_email, filter_to, app_password
+                )
 
     except Exception as e:
         print(traceback.format_exc())
         print(f"Error occurred when reading emails: {e}")
-
