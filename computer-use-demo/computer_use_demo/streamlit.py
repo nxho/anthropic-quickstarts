@@ -13,7 +13,6 @@ from enum import StrEnum
 from functools import partial
 from pathlib import PosixPath
 from typing import cast
-from uuid import uuid4
 
 import httpx
 from anthropic import RateLimitError
