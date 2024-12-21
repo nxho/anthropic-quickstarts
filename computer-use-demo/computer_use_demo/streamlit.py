@@ -107,7 +107,7 @@ def setup_state(state):
     state.setdefault("in_sampling_loop", False)
 
 
-async def main(new_message: str):
+async def main(new_message: str, session_id: str):
     """Render loop for streamlit"""
     state = {}
     setup_state(state)
@@ -119,8 +119,6 @@ async def main(new_message: str):
         ],
     })
 
-    session_id = uuid4().hex
-    logger.info(f"Session ID generated for \"{new_message}\": {session_id}")
     session_state.data[session_id] = {
         "messages": [{
             "role": Sender.USER,

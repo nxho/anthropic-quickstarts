@@ -32,13 +32,13 @@ def askgpt(system, prompt):
     return response.choices[0].message.content
 
 
-async def askgpt_and_start_session(prompt):
+async def askgpt_and_start_session(prompt, session_id):
     # Execute the computer use session
     system = "You are a prompt adjuster. You make flesh out prompts for AI tools that are capable and connected to the internet so that they are more clear and direct. Your prompts come from emails from normal people. Return a more clear prompt. Make some assumptions about what reasonable people would be requesting"
     email_input = askgpt(system, prompt)
 
     print("Starting virtual machine with prompt")
-    results = await streamlit_main(email_input)
+    results = await streamlit_main(email_input, session_id)
 
     system = "You are a robot named easi.work. You are writing an informal email with a summary of your findings from some set of results. You are not writing a template email. Do not start the email with a salutation. Do not end the email with a closing or signature. Here are the results:"
     return askgpt(system, results)
@@ -110,11 +110,31 @@ async def process_single_email(email_id_in_bytes, mail, from_email, filter_to, a
         print(f"Subject: {subject}")
         print(f"Body: {body}")
 
+        session_id = uuid4().hex
+        print(f"Session ID generated for \"{subject}\": {session_id}")
+
+        await loop.run_in_executor(None, partial(send_email,
+                                                 subject,
+                                                 f"Hey! Give us a moment, we're working on your request ({session_id})",
+                                                 sender,
+                                                 from_email,
+                                                 filter_to,
+                                                 app_password))
+
         # generate a response
         print("Asking GPT for a response")
         call_to_action = await askgpt_and_start_session(
-            f"Subject: {subject}\n\nBody: {body}"
+            f"Subject: {subject}\n\nBody: {body}",
+            session_id
         )
+
+        await loop.run_in_executor(None, partial(send_email,
+                                                 subject,
+                                                 call_to_action,
+                                                 sender,
+                                                 from_email,
+                                                 filter_to,
+                                                 app_password))
         send_email(
             subject,
             call_to_action,
