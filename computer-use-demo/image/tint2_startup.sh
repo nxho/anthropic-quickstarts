@@ -2,7 +2,8 @@
 echo "starting tint2 on display :$DISPLAY_NUM ..."
 
 # Start tint2 and capture its stderr
-G_SLICE=always-malloc tint2 -c $HOME/.config/tint2/tint2rc 2>/tmp/tint2_stderr.log &
+#G_SLICE=always-malloc 
+tint2 -c $HOME/.config/tint2/tint2rc 2>/tmp/tint2_stderr.log &
 
 # Wait for tint2 window properties to appear
 timeout=30

@@ -35,14 +35,13 @@ def askgpt(system, prompt):
 
 async def askgpt_and_start_session(prompt, session_id):
     # Execute the computer use session
-    system = "You are a prompt adjuster. You make flesh out prompts for AI tools that are capable and connected to the internet so that they are more clear and direct. Your prompts come from emails from normal people. Return a more clear prompt. Make some assumptions about what reasonable people would be requesting"
+    system = "You are a prompt adjuster. You flesh out prompts for consumption by other LLMs that are capable and connected to the internet so that they are more clear and direct. Your prompts come from emails and may contain extra information or insufficient information. Return a more clear prompt. Make some assumptions about what reasonable people would be requesting"
     email_input = askgpt(system, prompt)
 
     print("Starting virtual machine with prompt")
     results = await streamlit_main(email_input, session_id)
 
-    system = "You are a robot named easi.work. You are writing an informal email with a summary of your findings from some set of results. You are not writing a template email. Do not start the email with a salutation. Do not end the email with a closing or signature. Here are the results:"
-    return askgpt(system, results)
+    return results
 
 
 def send_email(subject, body, to_email, from_email, email_alias, app_password):
