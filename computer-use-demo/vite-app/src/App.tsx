@@ -96,20 +96,11 @@ function App() {
   }, []);
 
   return (
-    <div>
+    <div ref={containerRef}>
       <p>WebSocket Status: {connectionStatus}</p>
-      <div
-        ref={containerRef}
-        style={{
-            height: "800px",
-            overflowY: "auto",
-            border: "1px solid black",
-        }}
-      >
-        {messages.map((message, index) => (
-          <Message key={index} {...message} />
-        ))}
-      </div>
+      {messages.map((message, index) => (
+        <Message key={index} {...message} />
+      ))}
     </div>
   );
 }
