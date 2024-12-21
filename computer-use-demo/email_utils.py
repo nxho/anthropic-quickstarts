@@ -99,6 +99,7 @@ def fetch_email_metadata(email_id_in_bytes, mail):
 
 async def process_single_email(email_id_in_bytes, mail, from_email, filter_to, app_password):
     # avoid blocking event loop, do network calls in thread pool
+    loop = asyncio.get_running_loop()
     subject, body, sender, is_read = await loop.run_in_executor(
         None, partial(fetch_email_metadata, email_id_in_bytes, mail))
 
