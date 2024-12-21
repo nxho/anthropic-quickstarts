@@ -77,13 +77,10 @@ function App() {
     };
   }, []);
 
-  const containerRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<null | HTMLDivElement>(null)
 
   useEffect(() => {
-    const container = containerRef.current;
-    if (container) {
-      container.scrollTop = container.scrollHeight;
-    }
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages]);
 
   useEffect(() => {
@@ -99,7 +96,7 @@ function App() {
     <div ref={containerRef}>
       <p>WebSocket Status: {connectionStatus}</p>
       {messages.map((message, index) => (
-        <Message key={index} {...message} />
+        <Message key={index} {...message} ref={index === messages.length - 1 ? messagesEndRef : null} />
       ))}
     </div>
   );
