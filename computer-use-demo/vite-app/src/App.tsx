@@ -40,7 +40,7 @@ function App() {
     }
 
     // Create a WebSocket connection
-    const socket = new WebSocket(`ws://${window.location.host}:8001/${firstSegment}`);
+    const socket = new WebSocket(`ws://${window.location.hostname}:8001/${firstSegment}`);
 
     socketRef.current = socket;
 
