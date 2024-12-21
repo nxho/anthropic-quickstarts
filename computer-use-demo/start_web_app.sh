@@ -1,4 +1,4 @@
 #! /usr/bin/env bash
 
-cd vite-app && npm run dev
+cd vite-app && npm run dev -- --host
 
