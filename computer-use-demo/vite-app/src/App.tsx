@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { ForwardedRef, useEffect, useRef, useState } from "react";
 
 interface MessageEntity {
   role: string;
@@ -6,7 +6,7 @@ interface MessageEntity {
   content: string;
 }
 
-function Message({ role, type, content }: MessageEntity) {
+function Message({ role, type, content, ref }: MessageEntity & { ref: ForwardedRef<HTMLDivElement> }) {
   let element;
   switch (type) {
     case "text":
@@ -20,7 +20,7 @@ function Message({ role, type, content }: MessageEntity) {
 
   const backgroundColor = role === 'user' ? 'blue' : 'transparent';
   return (
-    <div style={{ border: '1px solid gray', padding: 20, backgroundColor }}>
+    <div ref={ref} style={{ border: '1px solid gray', padding: 20, backgroundColor }}>
       {element}
     </div>
   );
