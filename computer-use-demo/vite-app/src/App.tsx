@@ -83,15 +83,6 @@ function App() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages]);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      window.location.reload();
-    }, 10000); // 10 seconds
-
-    // Cleanup the interval on component unmount
-    return () => clearInterval(interval);
-  }, []);
-
   return (
     <div>
       <p>WebSocket Status: {connectionStatus}</p>
